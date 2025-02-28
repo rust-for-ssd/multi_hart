@@ -110,7 +110,7 @@ pub extern "Rust" fn user_mp_hook(hartid: usize) -> bool {
         true
     } else {
         loop {
-            if  check_flag() {
+            if check_flag() {
                 break;
             }
         }
