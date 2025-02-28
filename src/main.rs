@@ -9,7 +9,87 @@ const UART_BASE: usize = 0x10000000;
 const UART_THR: *mut u8 = UART_BASE as *mut u8;     // Transmit Holding Register
 const UART_LSR: *mut u8 = (UART_BASE + 5) as *mut u8; // Line Status Register
 const UART_LSR_EMPTY_MASK: u8 = 0x20;               // Transmitter Empty bit
-                                                    // we probably need to enable uart fifo as per https://www.youtube.com/watch?v=HC7b1SVXoKM
+
+struct Uart {
+    base: usize,
+    thr: *mut u8,
+    lsr: *mut u8,
+    lsr_empty_mask: u8,
+}
+
+use core::fmt::Write;
+
+impl Uart {
+    fn new() -> Self {
+        Self {
+            base: UART_BASE,
+            thr: UART_THR,
+            lsr: UART_LSR,
+            lsr_empty_mask: UART_LSR_EMPTY_MASK,
+        }
+    }
+}
+
+impl Write for Uart {
+    fn write_str(&mut self, s: &str) -> Result<(), core::fmt::Error> {
+        // take the lock
+        //let _guard = LOCK.lock();
+        for byte in s.bytes() {
+            unsafe {
+                // Wait until the UART transmitter is empty
+                while (*self.lsr & self.lsr_empty_mask) == 0 {}
+                *self.thr = byte;
+            }
+        }
+        Ok(())
+    }
+}
+
+use core::sync::atomic::{AtomicUsize, Ordering};
+
+pub struct Spinlock {
+    // Changed from AtomicBool to AtomicUsize.
+    // 0 means unlocked, 1 means locked.
+    locked: AtomicUsize,
+}
+
+impl Spinlock {
+    pub const fn new() -> Self {
+        Spinlock {
+            locked: AtomicUsize::new(0),
+        }
+    }
+
+    #[unsafe(no_mangle)]
+    pub fn lock(&self) -> SpinlockGuard {
+        loop {
+            // Try to change from 0 (unlocked) to 1 (locked).
+            match self.locked.compare_exchange(0, 1, Ordering::Acquire, Ordering::Relaxed) {
+                Ok(_) => break,
+                Err(_) => continue,
+            }
+        }
+        SpinlockGuard { lock: self }
+    }
+}
+
+pub struct SpinlockGuard<'a> {
+    lock: &'a Spinlock,
+}
+
+impl<'a> Drop for SpinlockGuard<'a> {
+    #[unsafe(no_mangle)]
+    fn drop(&mut self) {
+        self.lock.locked.store(0, Ordering::Release);
+    }
+}
+
+// This spinlock is now using a native word-sized atomic operation,
+// so on riscv64gc the compare_exchange will compile into an AMO instruction.
+unsafe impl Sync for Spinlock {}
+
+static LOCK: Spinlock = Spinlock::new();
+static LOCK_2: Spinlock = Spinlock::new();
 
 extern crate panic_halt;
 
@@ -48,16 +128,9 @@ pub extern "Rust" fn user_mp_hook(hartid: usize) -> bool {
     }
 }
 
-fn write_c(c: u8) {
-    unsafe {
-        while (*UART_LSR & UART_LSR_EMPTY_MASK) == 0 {}
-        *UART_THR = c;
-    }
-}
-
 #[entry]
 fn main(hartid: usize) -> ! {
-       if hartid == 0 {
+    if hartid == 0 {
         // Waking hart 1...
         let addr = 0x02000004;
         unsafe {
@@ -65,14 +138,20 @@ fn main(hartid: usize) -> ! {
         }
     }
     let id = hartid;
+    {
+        //let _guard = LOCK_2.lock();
 
-    for i in 0..8 {
-        let byte: u8 = (id >> i) as u8;
-        if byte == 0 {
-            write_c(b"0"[0]);
+    //write!(Uart::new(), "*{}*\n", id).ok();
+        let mut uart = Uart::new();
+        if id == 0 {
+        uart.write_str("aaaaaaaaaaa");
         } else {
-            write_c(byte);
+        uart.write_str("bbbbbbbbbbb");
+
         }
+
+        write!(Uart::new(), "*{}*\n", id).ok();
+        //drop(_guard);
     }
     loop { }
 }
