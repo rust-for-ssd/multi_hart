@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+embedded-alloc = "0.6.0"
 panic-halt = "1.0.0"
 riscv = "0.13.0"
 riscv-rt = "0.14.0"
