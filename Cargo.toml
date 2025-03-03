@@ -15,6 +15,7 @@ qemu_uart = { path = "/home/mlflexer/repos/qemu_uart", version = "0.1.0" }
 semihosting = { version = "0.1.19", features = ["panic-handler", "stdio"] }
 heapless = "0.8.0"
 panic-halt = "1.0.0"
+embedded-alloc = "0.6.0"
 # riscv-semihosting = "0.1.3"
 
 
