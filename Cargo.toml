@@ -4,11 +4,23 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-embedded-alloc = "0.6.0"
-panic-halt = "1.0.0"
+# embedded-alloc = "0.6.0"
+# panic-halt = "1.0.0"
 riscv = "0.13.0"
 riscv-rt = "0.14.0"
+multi-hart-critical-section = { path = "/home/mlflexer/repos/multi-hart-critical-section", version = "0.1.0", features = ["critical-section-multi-hart"] }
+critical-section = { version = "1.2.0", features = ["restore-state-usize"] } 
+# qemu_uart = { git = "https://github.com/rust-for-ssd/qemu_uart", version = "0.1.0" }
+# qemu_uart = { path = "/home/mlflexer/repos/qemu_uart", version = "0.1.0" }
+semihosting = { version = "0.1.19", features = ["panic-handler", "stdio"] }
+heapless = "0.8.0"
+# riscv-semihosting = "0.1.3"
+
 
 [profile.devtest]
 inherits = "release"
 opt-level = "s"
+
+[lib]
+test = false
+harness = false

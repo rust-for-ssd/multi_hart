@@ -13,7 +13,7 @@ release:
 	cargo build --release
 
 gdb_server:
-	qemu-system-riscv64 -smp 2 -machine virt -s -S -serial 'mon:stdio' -nographic -bios $(debug_target)
+	qemu-system-riscv64 -smp 4 -machine virt -s -S -serial 'mon:stdio' -nographic -bios $(debug_target)
 
 gdb_client:
 	rust-gdb $(debug_target) -ex "target remote :1234" -ex "set print pretty on"
