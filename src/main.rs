@@ -8,7 +8,6 @@ use core::{
 use critical_section::Mutex;
 use qemu_uart::{UART, csprintln};
 use riscv_rt::entry;
-// use semihosting::println;
 extern crate panic_halt;
 
 static INIT_PROGRAM_FLAG: AtomicBool = AtomicBool::new(true);
@@ -39,22 +38,53 @@ pub extern "Rust" fn user_mp_hook(hartid: usize) -> bool {
 use heapless::Deque;
 use multi_hart_critical_section as _;
 
-static DEQUE: Mutex<RefCell<Deque<usize, 50>>> =
+static QUEUE1: Mutex<RefCell<Deque<usize, 50>>> =
     Mutex::new(RefCell::new(Deque::<usize, 50>::new()));
+
+static QUEUE2: Mutex<RefCell<Deque<usize, 50>>> =
+Mutex::new(RefCell::new(Deque::<usize, 50>::new()));
 
 #[entry]
 fn main(hartid: usize) -> ! {
     if hartid == 0 {
         set_flag();
-    }
-    for _i in 0..=50u32.div_ceil(4) {
-        critical_section::with(|cs| {
-            let mut dq = DEQUE.borrow_ref_mut(cs);
-            let _ = dq.push_front(hartid);
-            csprintln!(cs, "{:?}", dq);
-        });
+        
+        // HART 0 adds to the first queue
+        for i in 0..10 {
+            critical_section::with(|cs| {
+                let mut queue = QUEUE1.borrow_ref_mut(cs);
+                let _ = queue.push_back(i);
+                csprintln!(cs, "Hart 0 added: {}, Queue: {:?}", i, queue);
+            });
+        }
+    } else {
+        // Everyone else reads from queue 1 and adds to queue 2
+        for _ in 0..20 {
+            critical_section::with(|cs| {
+                let mut queue = QUEUE1.borrow_ref_mut(cs);
+                if let Some(value) = queue.pop_front() {
+                    csprintln!(cs, "Hart {} read: {}", hartid, value);
+                    let mut queue = QUEUE2.borrow_ref_mut(cs);
+                    let _ = queue.push_back(value);
+                }
+                
+            });
+        }
     }
 
-    // ExitCode::SUCCESS.exit_process();
+    if hartid == 0 {
+      critical_section::with(|cs| {
+        let mut queue1 = QUEUE1.borrow_ref_mut(cs);
+        let mut queue2 = QUEUE2.borrow_ref_mut(cs);
+        csprintln!(cs, "---Final queues ---");
+        csprintln!(cs, "Queue1: {:?}", queue1);
+        csprintln!(cs, "Queue2: {:?}", queue2);
+
+    });  
+    }
+    //print final queues
+    
+
+
     loop {}
 }
