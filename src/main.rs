@@ -6,11 +6,10 @@ use core::{
     sync::atomic::{AtomicBool, Ordering},
 };
 use critical_section::Mutex;
+use qemu_uart::{UART, csprintln};
 use riscv_rt::entry;
-use semihosting::{
-    println,
-    process::{ExitCode, exit},
-};
+// use semihosting::println;
+extern crate panic_halt;
 
 static INIT_PROGRAM_FLAG: AtomicBool = AtomicBool::new(true);
 
@@ -48,31 +47,14 @@ fn main(hartid: usize) -> ! {
     if hartid == 0 {
         set_flag();
     }
-    for i in 0..=50u32.div_ceil(4) {
+    for _i in 0..=50u32.div_ceil(4) {
         critical_section::with(|cs| {
             let mut dq = DEQUE.borrow_ref_mut(cs);
             let _ = dq.push_front(hartid);
-            println!("HID: {}, i: {}, {:?}", hartid, i, dq);
+            csprintln!(cs, "{:?}", dq);
         });
     }
 
     // ExitCode::SUCCESS.exit_process();
-    loop {}
-}
-
-#[unsafe(export_name = "DefaultHandler")]
-unsafe fn custom_interrupt_handler() {
-    println!("THIS IS FROM DEFAULT");
-    loop {}
-}
-
-#[unsafe(export_name = "ExceptionHandler")]
-unsafe fn custom_exception_handler() {
-    println!(
-        "THIS IS FROM EXCEPTION: {}",
-        riscv::register::mhartid::read()
-    );
-    let mepc = riscv::register::mepc::read();
-    println!("{}", mepc);
     loop {}
 }
