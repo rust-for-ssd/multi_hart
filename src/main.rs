@@ -52,9 +52,8 @@ fn main(hartid: usize) -> ! {
         }
         
         set_flag();
-    }
-    riscv::asm::fence();
-    
+    }    
+
     // Everyone reads from queue
     for _ in 0..20 {
         if let Some(x) = QUEUE.dequeue() {

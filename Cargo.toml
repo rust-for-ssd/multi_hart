@@ -14,6 +14,7 @@ qemu_uart = { git = "https://github.com/rust-for-ssd/qemu_uart", version = "0.1.
 semihosting = { version = "0.1.19", features = ["panic-handler", "stdio"] }
 heapless = { version = "0.8.0", features = ["mpmc_large"] }
 panic-halt = "1.0.0"
+portable-atomic = { version = "1.3", default-features = false, features = ["require-cas"] }
 # riscv-semihosting = "0.1.3"
 
 

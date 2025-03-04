@@ -56,6 +56,7 @@ dependencies = [
  "heapless",
  "multi-hart-critical-section",
  "panic-halt",
+ "portable-atomic",
  "qemu_uart",
  "riscv",
  "riscv-rt",
@@ -73,6 +74,12 @@ name = "paste"
 version = "1.0.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "57c0d7b74b563b49d38dae00a0c37d4d6de9b432382b2892f0574ddcae73fd0a"
+
+[[package]]
+name = "portable-atomic"
+version = "1.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "350e9b48cbc6b0e028b0473b114454c6316e57336ee184ceab6e53f72c178b3e"
 
 [[package]]
 name = "proc-macro2"
