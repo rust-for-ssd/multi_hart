@@ -29,6 +29,12 @@ fn check_flag() -> bool {
 #[rustfmt::skip]
 pub extern "Rust" fn user_mp_hook(hartid: usize) -> bool {
     if hartid == 0 {
+        const HEAP_SIZE: usize = 1024;
+        static mut HEAP_MEM: [MaybeUninit<u8>; HEAP_SIZE] = [MaybeUninit::uninit(); HEAP_SIZE];
+        unsafe { HEAP.init(&raw mut HEAP_MEM as usize, HEAP_SIZE) }
+        critical_section::with(|cs| {
+            csprintln!(cs, "Mem arr {:p}", {&raw mut HEAP_MEM})
+        });   
         true
     } else {
         loop {
@@ -53,12 +59,7 @@ static HEAP: Heap = Heap::empty();
 fn main(hartid: usize) -> ! {
     if hartid == 0 {
         
-        const HEAP_SIZE: usize = 1024;
-        static mut HEAP_MEM: [MaybeUninit<u8>; HEAP_SIZE] = [MaybeUninit::uninit(); HEAP_SIZE];
-        unsafe { HEAP.init(&raw mut HEAP_MEM as usize, HEAP_SIZE) }
-        critical_section::with(|cs| {
-            csprintln!(cs, "Mem arr {:p}", {&raw mut HEAP_MEM})
-        });    
+        
 
         set_flag();
 
