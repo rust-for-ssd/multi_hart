@@ -42,14 +42,6 @@ dependencies = [
 [[package]]
 name = "multi-hart-critical-section"
 version = "0.1.0"
-dependencies = [
- "critical-section",
- "riscv",
-]
-
-[[package]]
-name = "multi-hart-critical-section"
-version = "0.1.0"
 source = "git+https://github.com/rust-for-ssd/multi-hart-critical-section.git#0cf2a890014fead707077f0db1bf502485c8c3f4"
 dependencies = [
  "critical-section",
@@ -62,7 +54,7 @@ version = "0.1.0"
 dependencies = [
  "critical-section",
  "heapless",
- "multi-hart-critical-section 0.1.0",
+ "multi-hart-critical-section",
  "panic-halt",
  "qemu_uart",
  "riscv",
@@ -94,9 +86,10 @@ dependencies = [
 [[package]]
 name = "qemu_uart"
 version = "0.1.0"
+source = "git+https://github.com/rust-for-ssd/qemu_uart#cc1f1da4e23c2b088025554f533de71b95b160e9"
 dependencies = [
  "critical-section",
- "multi-hart-critical-section 0.1.0 (git+https://github.com/rust-for-ssd/multi-hart-critical-section.git)",
+ "multi-hart-critical-section",
  "panic-halt",
  "riscv",
  "riscv-rt",
