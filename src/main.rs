@@ -1,14 +1,19 @@
 #![no_std]
 #![no_main]
 
+extern crate panic_halt;
+
+extern crate alloc;
+
+
+use alloc::vec::Vec;
 use core::{
     cell::RefCell,
     sync::atomic::{AtomicBool, Ordering},
 };
-use critical_section::Mutex;
 use qemu_uart::{UART, csprintln};
 use riscv_rt::entry;
-extern crate panic_halt;
+use embedded_alloc::LlffHeap as Heap;
 
 static INIT_PROGRAM_FLAG: AtomicBool = AtomicBool::new(true);
 
@@ -35,55 +40,37 @@ pub extern "Rust" fn user_mp_hook(hartid: usize) -> bool {
     }
 }
 
-use heapless::Deque;
 use multi_hart_critical_section as _;
+use core::mem::MaybeUninit;
 
-static QUEUE1: Mutex<RefCell<Deque<usize, 50>>> =
-    Mutex::new(RefCell::new(Deque::<usize, 50>::new()));
 
-static QUEUE2: Mutex<RefCell<Deque<usize, 50>>> =
-Mutex::new(RefCell::new(Deque::<usize, 50>::new()));
+#[global_allocator]
+static HEAP: Heap = Heap::empty();
+
+
 
 #[entry]
 fn main(hartid: usize) -> ! {
     if hartid == 0 {
-        set_flag();
         
-        // HART 0 adds to the first queue
-        for i in 0..10 {
-            critical_section::with(|cs| {
-                let mut queue = QUEUE1.borrow_ref_mut(cs);
-                let _ = queue.push_back(i);
-                csprintln!(cs, "Hart 0 added: {}, Queue: {:?}", i, queue);
-            });
-        }
-    } else {
-        // Everyone else reads from queue 1 and adds to queue 2
-        for _ in 0..20 {
-            critical_section::with(|cs| {
-                let mut queue = QUEUE1.borrow_ref_mut(cs);
-                if let Some(value) = queue.pop_front() {
-                    csprintln!(cs, "Hart {} read: {}", hartid, value);
-                    let mut queue = QUEUE2.borrow_ref_mut(cs);
-                    let _ = queue.push_back(value);
-                }
-                
-            });
-        }
+        const HEAP_SIZE: usize = 1024;
+        static mut HEAP_MEM: [MaybeUninit<u8>; HEAP_SIZE] = [MaybeUninit::uninit(); HEAP_SIZE];
+        unsafe { HEAP.init(&raw mut HEAP_MEM as usize, HEAP_SIZE) }
+        critical_section::with(|cs| {
+            csprintln!(cs, "Mem arr {:p}", {&raw mut HEAP_MEM})
+        });    
+
+        set_flag();
+
     }
 
-    if hartid == 0 {
-      critical_section::with(|cs| {
-        let mut queue1 = QUEUE1.borrow_ref_mut(cs);
-        let mut queue2 = QUEUE2.borrow_ref_mut(cs);
-        csprintln!(cs, "---Final queues ---");
-        csprintln!(cs, "Queue1: {:?}", queue1);
-        csprintln!(cs, "Queue2: {:?}", queue2);
+    let mut xs = Vec::new();
 
-    });  
-    }
-    //print final queues
-    
+    critical_section::with(|cs| {
+        xs.push(hartid);
+        csprintln!(cs, "Hart {} added to shared list", hartid);
+    });
+
 
 
     loop {}
